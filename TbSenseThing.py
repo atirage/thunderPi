@@ -111,8 +111,9 @@ class ExtEnvironSensor(Thing):
 
     def __init__(self, tbsense):
         Thing.__init__(self,
+                       'urn:dev:ops:my-tb-thing-1234',
                        'My Thunderboard Sense Thing',
-                       ['TemperatureSensor', 'MultiLevelSensor', 'MultiLevelSensor', 'MultiLevelSensor', 'MultiLevelSensor'],
+                       ['TemperatureSensor', 'MultiLevelSensor', 'MultiLevelSensor', 'MultiLevelSensor', 'MultiLevelSensor', 'MultiLevelSensor', 'MultiLevelSensor'],
                        'A web connected environment sensor')
 
         self.tbsense = tbsense
@@ -130,6 +131,7 @@ class ExtEnvironSensor(Thing):
                                 'maximum': 100.0,
                                 'unit': 'Celsius',
                                 'readOnly': True,
+                                'multipleOf': 0.1,
                               }))
 
         #humidity sensor
@@ -145,6 +147,7 @@ class ExtEnvironSensor(Thing):
                                 'maximum': 100,
                                 'unit': '%',
                                 'readOnly': True,
+                                'multipleOf': 0.1,
                               }))
         #ambient light sensor
         self.amb_light = Value(0.0)
@@ -186,6 +189,35 @@ class ExtEnvironSensor(Thing):
                               'maximum': 1.2,
                               'unit': 'atm',
                               'readOnly': True,
+                              'multipleOf': 0.01,
+                            }))
+        #CO2 level
+        self.co2 = Value(0)
+        self.add_property(
+          Property(self, 'co2', self.co2,
+                   metadata={
+                              '@type': 'LevelProperty',
+                              'title': 'CO2 level',
+                              'type': 'number',
+                              'description': 'The level of CO2',
+                              'minimum': 0,
+                              'maximum': 5000,
+                              'unit': 'ppm',
+                              'readOnly': True,
+                            }))
+        #VOC level
+        self.voc = Value(0)
+        self.add_property(
+          Property(self, 'voc', self.voc,
+                   metadata={
+                              '@type': 'LevelProperty',
+                              'title': 'VOC content',
+                              'type': 'number',
+                              'description': 'VOC content of air',
+                              'minimum': 0,
+                              'maximum': 5000,
+                              'unit': 'ppb',
+                              'readOnly': True,
                             }))
 
         syslog.syslog('Starting the sensor update looping task')
@@ -198,6 +230,8 @@ class ExtEnvironSensor(Thing):
                 self.humidity.notify_of_external_update(self.tbsense.readHumidity())
                 self.amb_light.notify_of_external_update(self.tbsense.readAmbientLight())
                 self.uv_index.notify_of_external_update(self.tbsense.readUvIndex())
+                self.co2.notify_of_external_update(self.tbsense.readCo2())
+                self.voc.notify_of_external_update(self.tbsense.readVoc())
                 self.pressure.notify_of_external_update(round(self.tbsense.readPressure()/1000, 2))
                 await sleep(h)
         except CancelledError:
@@ -226,7 +260,7 @@ def run_server():
         if tbsense is not None:
             break
         syslog.syslog('Not found, retrying after 5sec ...')
-        sleep(5)
+        time.sleep(5)
 
     sensors = ExtEnvironSensor(tbsense)
 
