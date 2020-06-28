@@ -9,7 +9,7 @@ import syslog
 import time
 import uuid
 
-h = 5 #5sec
+h = 30 #5sec
 
 class Thunderboard:
 
@@ -26,37 +26,8 @@ class Thunderboard:
         for (adtype, desc, value) in scanData:
            if (desc == 'Complete Local Name'):
               self.name = value
-        ble_service = Peripheral()
-        ble_service.connect(dev.addr, dev.addrType)
-        characteristics = ble_service.getCharacteristics()
-
-        for k in characteristics:
-            if k.uuid == '2a6e':
-               self.char['temperature'] = k
-
-            elif k.uuid == '2a6f':
-               self.char['humidity'] = k
-
-            elif k.uuid == '2a76':
-               self.char['uvIndex'] = k
-
-            elif k.uuid == '2a6d':
-               self.char['pressure'] = k
-
-            elif k.uuid == 'c8546913-bfd9-45eb-8dde-9f8754f4a32e':
-               self.char['ambientLight'] = k
-
-            elif k.uuid == 'c8546913-bf02-45eb-8dde-9f8754f4a32e':
-               self.char['sound'] = k
-
-            elif k.uuid == 'efd658ae-c401-ef33-76e7-91b00019103b':
-               self.char['co2'] = k
-
-            elif k.uuid == 'efd658ae-c402-ef33-76e7-91b00019103b':
-               self.char['voc'] = k
-
-            elif k.uuid == 'ec61a454-ed01-a5e8-b8f9-de9ec026ec51':
-               self.char['power_source_type'] = k
+        self.peri = Peripheral()
+        self.peri.connect(dev.addr, dev.addrType)
 
     def readTemperature(self):
         value = self.char['temperature'].read()
@@ -105,6 +76,40 @@ class Thunderboard:
         value = value[0] / 1000
         return value
 
+    def getConnState(self):
+        return self.peri.getState()
+
+    def storeCharacteristics(self):
+        characteristics = self.peri.getCharacteristics()
+
+        for k in characteristics:
+            if k.uuid == '2a6e':
+               self.char['temperature'] = k
+
+            elif k.uuid == '2a6f':
+               self.char['humidity'] = k
+
+            elif k.uuid == '2a76':
+               self.char['uvIndex'] = k
+
+            elif k.uuid == '2a6d':
+               self.char['pressure'] = k
+
+            elif k.uuid == 'c8546913-bfd9-45eb-8dde-9f8754f4a32e':
+               self.char['ambientLight'] = k
+
+            elif k.uuid == 'c8546913-bf02-45eb-8dde-9f8754f4a32e':
+               self.char['sound'] = k
+
+            elif k.uuid == 'efd658ae-c401-ef33-76e7-91b00019103b':
+               self.char['co2'] = k
+
+            elif k.uuid == 'efd658ae-c402-ef33-76e7-91b00019103b':
+               self.char['voc'] = k
+
+            elif k.uuid == 'ec61a454-ed01-a5e8-b8f9-de9ec026ec51':
+               self.char['power_source_type'] = k
+
 class ExtEnvironSensor(Thing):
     """An external environment sensor which updates every few seconds."""
     global h
@@ -122,7 +127,7 @@ class ExtEnvironSensor(Thing):
         self.temp = Value(0.0)
         self.add_property(
             Property(self, 'temperature', self.temp,
-                     metadata={
+                    metadata={
                                 '@type': 'TemperatureProperty',
                                 'title': 'Outside Temperature',
                                 'type': 'number',
@@ -133,12 +138,11 @@ class ExtEnvironSensor(Thing):
                                 'readOnly': True,
                                 'multipleOf': 0.1,
                               }))
-
         #humidity sensor
         self.humidity = Value(0.0)
         self.add_property(
             Property(self, 'humidity', self.humidity,
-                     metadata={
+                    metadata={
                                 '@type': 'LevelProperty',
                                 'title': 'Humidity',
                                 'type': 'number',
@@ -150,37 +154,37 @@ class ExtEnvironSensor(Thing):
                                 'multipleOf': 0.1,
                               }))
         #ambient light sensor
-        self.amb_light = Value(0.0)
-        self.add_property(
-          Property(self, 'ambient light', self.amb_light,
-                   metadata={
-                              '@type': 'LevelProperty',
-                              'title': 'Ambient Light',
-                              'type': 'number',
-                              'description': 'The level of ambient light',
-                              'minimum': 0,
-                              'maximum': 100000,
-                              'unit': 'lux',
-                              'readOnly': True,
-                            }))
+        # self.amb_light = Value(0.0)
+        # self.add_property(
+        #     Property(self, 'ambient light', self.amb_light,
+        #             metadata={
+        #                       '@type': 'LevelProperty',
+        #                       'title': 'Ambient Light',
+        #                       'type': 'number',
+        #                       'description': 'The level of ambient light',
+        #                       'minimum': 0,
+        #                       'maximum': 100000,
+        #                       'unit': 'lux',
+        #                       'readOnly': True,
+        #                     }))
         #UV index
-        self.uv_index = Value(0.0)
-        self.add_property(
-          Property(self, 'UV index', self.uv_index,
-                   metadata={
-                              '@type': 'LevelProperty',
-                              'title': 'UV index',
-                              'type': 'number',
-                              'description': 'The level of UV index',
-                              'minimum': 0,
-                              'maximum': 50,
-                              'readOnly': True,
-                            }))
+        # self.uv_index = Value(0.0)
+        # self.add_property(
+        #     Property(self, 'UV index', self.uv_index,
+        #             metadata={
+        #                       '@type': 'LevelProperty',
+        #                       'title': 'UV index',
+        #                       'type': 'number',
+        #                       'description': 'The level of UV index',
+        #                       'minimum': 0,
+        #                       'maximum': 50,
+        #                       'readOnly': True,
+        #                     }))
         #barometric pressure
         self.pressure = Value(0.0)
         self.add_property(
-          Property(self, 'pressure', self.pressure,
-                   metadata={
+            Property(self, 'pressure', self.pressure,
+                    metadata={
                               '@type': 'LevelProperty',
                               'title': 'Barometric pressure',
                               'type': 'number',
@@ -194,8 +198,8 @@ class ExtEnvironSensor(Thing):
         #CO2 level
         self.co2 = Value(0)
         self.add_property(
-          Property(self, 'co2', self.co2,
-                   metadata={
+            Property(self, 'co2', self.co2,
+                    metadata={
                               '@type': 'LevelProperty',
                               'title': 'CO2 level',
                               'type': 'number',
@@ -208,8 +212,8 @@ class ExtEnvironSensor(Thing):
         #VOC level
         self.voc = Value(0)
         self.add_property(
-          Property(self, 'voc', self.voc,
-                   metadata={
+            Property(self, 'voc', self.voc,
+                    metadata={
                               '@type': 'LevelProperty',
                               'title': 'VOC content',
                               'type': 'number',
@@ -224,18 +228,34 @@ class ExtEnvironSensor(Thing):
         self.enviro_task = get_event_loop().create_task(self.update_TbSense())
 
     async def update_TbSense(self):
-        try:
-            while True:
-                self.temp.notify_of_external_update(self.tbsense.readTemperature())
-                self.humidity.notify_of_external_update(self.tbsense.readHumidity())
-                self.amb_light.notify_of_external_update(self.tbsense.readAmbientLight())
-                self.uv_index.notify_of_external_update(self.tbsense.readUvIndex())
-                self.co2.notify_of_external_update(self.tbsense.readCo2())
-                self.voc.notify_of_external_update(self.tbsense.readVoc())
-                self.pressure.notify_of_external_update(round(self.tbsense.readPressure()/1000, 2))
-                await sleep(h)
-        except CancelledError:
-            pass
+        while True:
+            try:
+                if self.tbsense.getConnState() == 'conn':
+                    self.temp.notify_of_external_update(self.tbsense.readTemperature())
+                    self.humidity.notify_of_external_update(self.tbsense.readHumidity())
+                    # self.amb_light.notify_of_external_update(self.tbsense.readAmbientLight())
+                    # self.uv_index.notify_of_external_update(self.tbsense.readUvIndex())
+                    self.co2.notify_of_external_update(self.tbsense.readCo2())
+                    self.voc.notify_of_external_update(self.tbsense.readVoc())
+                    self.pressure.notify_of_external_update(round(self.tbsense.readPressure()/1000, 2))
+                    await sleep(h)
+                else:
+                    raise BTLEDisconnectError("Connection lost!")
+            except (BTLEDisconnectError, BTLEInternalError):
+                syslog.syslog('Trying to reconnect...')
+                while True:
+                    try:
+                        #try to reconnect same device
+                        await sleep(1)
+                        self.tbsense.peri.connect(self.tbsense.dev.addr, self.tbsense.dev.addrType)
+                        self.tbsense.storeCharacteristics()
+                    except:
+                        continue
+                    else:
+                        syslog.syslog('Reconnected!')
+                        break
+            except CancelledError:
+                break
 
     def cancel_tasks(self):
         self.enviro_task.cancel()
@@ -250,6 +270,7 @@ def getThunderboard():
             if desc == 'Complete Local Name' and 'Thunder Sense #' in value:
                     deviceId = int(value.split('#')[-1])
                     tb = Thunderboard(dev)
+                    tb.storeCharacteristics()
                     break
     return tb
 
@@ -274,7 +295,7 @@ def run_server():
     except KeyboardInterrupt:
         sensors.cancel_tasks()
         server.stop()
-        syslog.syslog('Webthing server stopped')
+        syslog.syslog('Thundeboard Webthing stopped')
 
 if __name__ == '__main__':
     run_server()
