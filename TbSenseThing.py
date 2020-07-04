@@ -27,7 +27,10 @@ class Thunderboard:
            if (desc == 'Complete Local Name'):
               self.name = value
         self.peri = Peripheral()
-        self.peri.connect(dev.addr, dev.addrType)
+        try:
+            self.peri.connect(dev.addr, dev.addrType)
+        except:
+            pass
 
     def readTemperature(self):
         value = self.char['temperature'].read()
@@ -129,9 +132,9 @@ class ExtEnvironSensor(Thing):
             Property(self, 'temperature', self.temp,
                     metadata={
                                 '@type': 'TemperatureProperty',
-                                'title': 'Outside Temperature',
+                                'title': 'Temperature',
                                 'type': 'number',
-                                'description': 'The level of outside temperature in C',
+                                'description': 'The ambient temperature in C',
                                 'minimum': -40.0,
                                 'maximum': 100.0,
                                 'unit': 'Celsius',
@@ -223,6 +226,17 @@ class ExtEnvironSensor(Thing):
                               'unit': 'ppb',
                               'readOnly': True,
                             }))
+        #Connection state
+        self.connctd = Value(False)
+        self.add_property(
+            Property(self, 'connctd', self.connctd,
+                    metadata={
+                              '@type': 'OnOffProperty',
+                              'title': 'Connection',
+                              'type': 'boolean',
+                              'description': 'Conection status to Thunderboard',
+                              'readOnly': True,
+                            }))
 
         syslog.syslog('Starting the sensor update looping task')
         self.enviro_task = get_event_loop().create_task(self.update_TbSense())
@@ -231,15 +245,18 @@ class ExtEnvironSensor(Thing):
         while True:
             try:
                 if self.tbsense.getConnState() == 'conn':
-                    self.temp.notify_of_external_update(self.tbsense.readTemperature())
+                    temp = self.tbsense.readTemperature() - 6.0
+                    self.temp.notify_of_external_update(temp)
                     self.humidity.notify_of_external_update(self.tbsense.readHumidity())
                     # self.amb_light.notify_of_external_update(self.tbsense.readAmbientLight())
                     # self.uv_index.notify_of_external_update(self.tbsense.readUvIndex())
                     self.co2.notify_of_external_update(self.tbsense.readCo2())
                     self.voc.notify_of_external_update(self.tbsense.readVoc())
                     self.pressure.notify_of_external_update(round(self.tbsense.readPressure()/1000, 2))
+                    self.connctd.notify_of_external_update(True)
                     await sleep(h)
                 else:
+                    self.connctd.notify_of_external_update(False)
                     raise BTLEDisconnectError("Connection lost!")
             except (BTLEDisconnectError, BTLEInternalError):
                 syslog.syslog('Trying to reconnect...')
@@ -253,6 +270,7 @@ class ExtEnvironSensor(Thing):
                         continue
                     else:
                         syslog.syslog('Reconnected!')
+                        self.connctd.notify_of_external_update(True)
                         break
             except CancelledError:
                 break
@@ -270,7 +288,8 @@ def getThunderboard():
             if desc == 'Complete Local Name' and 'Thunder Sense #' in value:
                     deviceId = int(value.split('#')[-1])
                     tb = Thunderboard(dev)
-                    tb.storeCharacteristics()
+                    if tb.getConnState() == 'conn':
+                        tb.storeCharacteristics()
                     break
     return tb
 
