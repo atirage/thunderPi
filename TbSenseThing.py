@@ -13,19 +13,14 @@ h = 30 #5sec
 
 class Thunderboard:
 
-    def __init__(self, dev):
+    def __init__(self, dev, dev_name):
         #self.session = ''
         self.dev  = dev
         self.char = dict()
         self.name = ''
         self.coinCell = False
 
-        # Get device name and characteristics
-        scanData = dev.getScanData()
-
-        for (adtype, desc, value) in scanData:
-           if (desc == 'Complete Local Name'):
-              self.name = value
+        self.name = dev_name
         self.peri = Peripheral()
         try:
             self.peri.connect(dev.addr, dev.addrType)
@@ -287,7 +282,7 @@ def getThunderboard():
         for (adtype, desc, value) in scanData:
             if desc == 'Complete Local Name' and 'Thunder Sense #' in value:
                     deviceId = int(value.split('#')[-1])
-                    tb = Thunderboard(dev)
+                    tb = Thunderboard(dev, value)
                     if tb.getConnState() == 'conn':
                         tb.storeCharacteristics()
                     break
